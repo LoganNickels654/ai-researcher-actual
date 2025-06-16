@@ -241,8 +241,8 @@ class ResearchAssistant:
         
         Please analyze these research papers and rank them by relevance to the research question.
         For each paper, provide:
-        1. A relevance score (0-10, where 10 is most relevant)
-        2. A brief reason why it's relevant or not relevant
+        1. A relevance score (0-10, where 10 is most relevant, be lenient with the scores, 10's should not be impossible to get, 5's would be unusable, there rarely should be anything scored below a 4)
+        2. A brief explanation as to why it's relevant or not relevant, and how it can be used in research
         
         Papers to analyze:
         {json.dumps(paper_summaries, indent=2)}
@@ -252,12 +252,12 @@ class ResearchAssistant:
           {{
             "index": 0,
             "relevance_score": 8.5,
-            "reason": "Directly addresses the research question with recent data"
+            "reason": "Directly addresses the research question with recent data, one of the most useful pages regarding the topic"
           }},
           {{
             "index": 1,
             "relevance_score": 6.0,
-            "reason": "Related topic but focuses on different population"
+            "reason": "Related topic but focuses on different population, could potentially provide insight into new avenues"
           }}
         ]
         
