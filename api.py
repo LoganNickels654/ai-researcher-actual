@@ -18,7 +18,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://scholar-search-scribe.lovable.app/",  # TODO: Replace with your actual domain
+        "https://scholar-search-scribe.lovable.app",  # TODO: Replace with your actual domain
         "http://localhost:3000",  # For local development
         "https://localhost:3000",  # For local development with HTTPS
     ],
