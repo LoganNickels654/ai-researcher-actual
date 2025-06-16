@@ -266,14 +266,29 @@ class ResearchAssistant:
         
         try:
             response = self.anthropic.messages.create(
-                model="claude-3-5-sonnet-20241022",  # Updated to current model
-                max_tokens=1000,
+                model="claude-3-5-sonnet-20241022",
+                max_tokens=1500,  # Increased token limit
                 messages=[{"role": "user", "content": prompt}]
             )
             
-            # Parse the JSON response
+            # Get the response text and clean it
             rankings_text = response.content[0].text.strip()
-            rankings = json.loads(rankings_text)
+            
+            # Remove any markdown code blocks if present
+            if rankings_text.startswith('```'):
+                rankings_text = rankings_text.split('\n', 1)[1]
+            if rankings_text.endswith('```'):
+                rankings_text = rankings_text.rsplit('\n', 1)[0]
+            
+            # Find JSON array in the response
+            start_idx = rankings_text.find('[')
+            end_idx = rankings_text.rfind(']') + 1
+            
+            if start_idx != -1 and end_idx != -1:
+                json_text = rankings_text[start_idx:end_idx]
+                rankings = json.loads(json_text)
+            else:
+                raise ValueError("No JSON array found in response")
             
             # Apply rankings to papers
             for ranking in rankings:
@@ -286,9 +301,21 @@ class ResearchAssistant:
             ranked_papers = sorted(papers, key=lambda p: p.relevance_score, reverse=True)
             return ranked_papers
             
+        except json.JSONDecodeError as e:
+            print(f"JSON parsing error: {e}")
+            print(f"Response text: {rankings_text[:500]}...")  # Log first 500 chars for debugging
+            # Fallback: assign default scores and return in original order
+            for i, paper in enumerate(papers):
+                paper.relevance_score = 7.0  # Default decent score
+                paper.relevance_reason = "Unable to analyze relevance due to parsing error"
+            return papers
+            
         except Exception as e:
             print(f"Ranking error: {e}")
-            # Fallback: return papers in original order
+            # Fallback: return papers in original order with default scores
+            for i, paper in enumerate(papers):
+                paper.relevance_score = 7.0
+                paper.relevance_reason = "Unable to analyze relevance"
             return papers
 
 
