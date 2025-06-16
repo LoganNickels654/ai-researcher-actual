@@ -21,6 +21,7 @@ app.add_middleware(
         "https://scholar-search-scribe.lovable.app",  # TODO: Replace with your actual domain
         "http://localhost:3000",  # For local development
         "https://localhost:3000",  # For local development with HTTPS
+        "https://lovable.dev/projects/541e8ded-eb97-427c-bcab-c7c9a0524d59", #For Lovable app dev
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
