@@ -28,16 +28,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Supabase setup - Two clients for different purposes
+# Supabase setup
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
-
-# Client for user authentication and user-facing operations
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
-
-# Admin client for backend operations (bypasses RLS)
-supabase_admin: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Rate limiting (prevents spam attacks)
 rate_limit_store = defaultdict(list)
@@ -116,7 +110,7 @@ async def verify_user_and_check_limits(authorization: str = Header(None)):
     token = authorization.split(" ")[1]
     
     try:
-        # Verify the user's token with Supabase (using regular client for auth)
+        # Verify the user's token with Supabase
         user_response = supabase.auth.get_user(token)
         if not user_response.user:
             raise HTTPException(status_code=401, detail="Invalid or expired token")
@@ -135,14 +129,13 @@ async def verify_user_and_check_limits(authorization: str = Header(None)):
 async def get_user_limits(user_id: str) -> UserLimits:
     """
     Gets user's subscription tier and calculates their limits
-    Uses admin client to bypass RLS for system operations
     - Free: 5 searches/day, no export
     - Premium: 50 searches/day, export allowed
     - Pro: 200 searches/day, export allowed
     """
     try:
-        # Get user's subscription info using admin client
-        subscription_result = supabase_admin.table("user_subscriptions").select("*").eq("user_id", user_id).execute()
+        # Get user's subscription info
+        subscription_result = supabase.table("user_subscriptions").select("*").eq("user_id", user_id).execute()
         
         # Default limits for free users
         daily_searches = 5
@@ -161,9 +154,9 @@ async def get_user_limits(user_id: str) -> UserLimits:
                 daily_searches = 200
                 can_export = True
         
-        # Check how many searches they've used today using admin client
+        # Check how many searches they've used today
         today = datetime.now().date()
-        usage_result = supabase_admin.table("user_usage").select("*").eq("user_id", user_id).eq("date", str(today)).execute()
+        usage_result = supabase.table("user_usage").select("*").eq("user_id", user_id).eq("date", str(today)).execute()
         
         searches_used_today = 0
         if usage_result.data and len(usage_result.data) > 0:
@@ -189,22 +182,21 @@ async def get_user_limits(user_id: str) -> UserLimits:
 async def increment_user_usage(user_id: str):
     """
     Adds 1 to the user's daily search count
-    Uses admin client to bypass RLS for system operations
     Creates a new record if it's their first search today
     """
     try:
         today = datetime.now().date()
         
-        # Check if user already has a record for today using admin client
-        existing = supabase_admin.table("user_usage").select("*").eq("user_id", user_id).eq("date", str(today)).execute()
+        # Check if user already has a record for today
+        existing = supabase.table("user_usage").select("*").eq("user_id", user_id).eq("date", str(today)).execute()
         
         if existing.data and len(existing.data) > 0:
-            # Update existing record using admin client
+            # Update existing record
             new_count = existing.data[0]["searches_count"] + 1
-            supabase_admin.table("user_usage").update({"searches_count": new_count}).eq("user_id", user_id).eq("date", str(today)).execute()
+            supabase.table("user_usage").update({"searches_count": new_count}).eq("user_id", user_id).eq("date", str(today)).execute()
         else:
-            # Create new record for today using admin client
-            supabase_admin.table("user_usage").insert({
+            # Create new record for today
+            supabase.table("user_usage").insert({
                 "user_id": user_id,
                 "date": str(today),
                 "searches_count": 1
@@ -307,8 +299,7 @@ async def save_paper(
     user, limits = user_data
     
     try:
-        # Use admin client for saving papers (system operation)
-        result = supabase_admin.table("saved_papers").insert({
+        result = supabase.table("saved_papers").insert({
             "user_id": user.id,
             "title": paper.title,
             "authors": paper.authors,
@@ -331,8 +322,7 @@ async def get_saved_papers(user_data = Depends(verify_user_and_check_limits)):
     user, limits = user_data
     
     try:
-        # Use admin client to fetch saved papers
-        result = supabase_admin.table("saved_papers").select("*").eq("user_id", user.id).execute()
+        result = supabase.table("saved_papers").select("*").eq("user_id", user.id).execute()
         return result.data
     
     except Exception as e:
@@ -354,8 +344,7 @@ async def export_papers(user_data = Depends(verify_user_and_check_limits)):
         )
     
     try:
-        # Use admin client to fetch papers for export
-        result = supabase_admin.table("saved_papers").select("*").eq("user_id", user.id).execute()
+        result = supabase.table("saved_papers").select("*").eq("user_id", user.id).execute()
         
         return {
             "message": "Export ready",
@@ -380,7 +369,5 @@ async def health_check():
         "status": "healthy",
         "anthropic_key": "✓" if os.getenv("ANTHROPIC_API_KEY") else "✗",
         "pubmed_email": "✓" if os.getenv("PUBMED_EMAIL") else "✗",
-        "supabase_url": "✓" if SUPABASE_URL else "✗",
-        "supabase_anon_key": "✓" if SUPABASE_ANON_KEY else "✗",
-        "supabase_service_key": "✓" if SUPABASE_SERVICE_KEY else "✗"
+        "supabase": "✓" if SUPABASE_URL and SUPABASE_KEY else "✗"
     }

@@ -189,7 +189,7 @@ class ResearchAssistant:
             
             # Get authors (limit to first 5)
             authors = []
-            for author in article_elem.findall('.//Author')[:5]:
+            for author in article_elem.findall('.//Author')[:10]:
                 lastname = author.find('LastName')
                 forename = author.find('ForeName')
                 if lastname is not None:
