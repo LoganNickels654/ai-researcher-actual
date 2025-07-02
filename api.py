@@ -145,7 +145,7 @@ async def get_user_limits(user_id: str) -> UserLimits:
         subscription_result = supabase_admin.table("user_subscriptions").select("*").eq("user_id", user_id).execute()
         
         # Default limits for free users
-        daily_searches = 5
+        daily_searches = 3
         can_export = False
         subscription_tier = "free"
         
@@ -155,10 +155,10 @@ async def get_user_limits(user_id: str) -> UserLimits:
             subscription_tier = sub.get("tier", "free")
             
             if subscription_tier == "premium":
-                daily_searches = 50
+                daily_searches = 3
                 can_export = True
             elif subscription_tier == "pro":
-                daily_searches = 200
+                daily_searches = 15
                 can_export = True
         
         # Check how many searches they've used today using admin client
